@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mind Freq — Binaural Beats</title>
+<style>
+  :root {
+    --bg: #5b84a3;
+    --card-dark: #474747;
+    --card-dark-shadow: #3a3a3a;
+    --green: #8fab55;
+    --green-shadow: #75904a;
+    --yellow: #e9c352;
+    --ink: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    font-family: "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .app {
+    width: min(1100px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  h1 {
+    text-align: center;
+    font-size: clamp(22px, 3.8vw, 42px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 3px rgba(0,0,0,0.25);
+  }
+  .presets {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .preset-btn {
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    font-size: clamp(12px, 1.5vw, 16px);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--card-dark);
+    border-radius: 999px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 0 var(--card-dark-shadow), 0 6px 10px rgba(0,0,0,0.18);
+    transition: transform 0.08s ease;
+  }
+  .preset-btn:active { transform: translateY(2px); }
+  .preset-btn.active {
+    background: var(--green);
+    box-shadow: 0 4px 0 var(--green-shadow), 0 6px 10px rgba(0,0,0,0.18);
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 0.72fr 1fr;
+    gap: clamp(16px, 4vw, 60px);
+  }
+  .card {
+    background: var(--card-dark);
+    border-radius: 10px;
+    box-shadow: 0 5px 0 var(--card-dark-shadow), 0 8px 14px rgba(0,0,0,0.18);
+    text-align: center;
+    padding: clamp(10px, 1.8vw, 20px) 8px;
+  }
+  .card.beat {
+    background: var(--green);
+    box-shadow: 0 5px 0 var(--green-shadow), 0 8px 14px rgba(0,0,0,0.18);
+  }
+  .card .label {
+    font-size: clamp(15px, 2.4vw, 30px);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.22);
+  }
+  .card .value {
+    font-size: clamp(15px, 2.4vw, 30px);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.22);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25em;
+  }
+  .card .value input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font: inherit;
+    text-align: right;
+    width: 3.6em;
+    border-radius: 8px;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .card .value input::-webkit-outer-spin-button,
+  .card .value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .card .value input:hover { background: rgba(255,255,255,0.12); }
+  .card .value input:focus {
+    background: rgba(255,255,255,0.18);
+    outline: 2px solid rgba(255,255,255,0.65);
+  }
+  .card .edit-hint {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin-top: 2px;
+  }
+  .chart-wrap { width: 100%; }
+  canvas { display: block; width: 100%; }
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+  .play-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: var(--green);
+    box-shadow: 0 5px 0 var(--green-shadow), 0 8px 14px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s ease;
+  }
+  .play-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--green-shadow); }
+  .play-btn svg { width: 30px; height: 30px; fill: #fff; }
+  .ctrl-group {
+    background: var(--card-dark);
+    border-radius: 10px;
+    box-shadow: 0 5px 0 var(--card-dark-shadow), 0 8px 14px rgba(0,0,0,0.18);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 140px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.35);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .ctrl-group input[type="number"] {
+    width: 64px;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+  }
+  .hint {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.85;
+    letter-spacing: 0.03em;
+  }
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .footer a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 0.8;
+  }
+  .footer a:hover { opacity: 1; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1 id="title">90 minutos de concentración</h1>
+
+  <div class="presets" id="presets"></div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Left Ear</div>
+      <div class="value"><input id="leftIn" type="number" step="1" min="30" max="1500"><span>Hz</span></div>
+      <div class="edit-hint">click para editar</div>
+    </div>
+    <div class="card beat">
+      <div class="label">Beat</div>
+      <div class="value"><input id="beatIn" type="number" step="0.5" min="0.5" max="40"><span>Hz</span></div>
+      <div class="edit-hint">click para editar</div>
+    </div>
+    <div class="card">
+      <div class="label">Right Ear</div>
+      <div class="value"><input id="rightIn" type="number" step="1" min="30" max="1540"><span>Hz</span></div>
+      <div class="edit-hint">click para editar</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span>Duración</span>
+      <input type="number" id="duration" value="90" min="5" max="180" step="5"> min
+    </div>
+    <button class="play-btn" id="playBtn" aria-label="Play">
+      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="pauseIcon" viewBox="0 0 24 24" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <div class="ctrl-group">
+      <span>Volumen</span>
+      <input type="range" id="volume" min="0" max="100" value="50">
+    </div>
+  </div>
+  <p class="hint">Usa audífonos — el beat solo existe entre tus oídos. 🎧</p>
+  <footer class="footer">
+    hecho por <a href="https://github.com/estape11" target="_blank" rel="noopener">estape11</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/estape11/mindfreq" target="_blank" rel="noopener">github.com/estape11/mindfreq</a>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Brainwave bands (bottom → top) ---------- */
+const BANDS = [
+  { name: "Delta", lo: 1,  hi: 4 },
+  { name: "Theta", lo: 4,  hi: 8 },
+  { name: "Alpha", lo: 8,  hi: 14 },
+  { name: "Beta",  lo: 14, hi: 99 }
+];
+
+/* ---------- Presets: beat schedule in [minute, Hz] breakpoints ---------- */
+const PRESETS = {
+  focus: {
+    label: "Concentración", titulo: "concentración", dur: 90, carrier: 150, band: "Alpha",
+    sched: [[0,15.2],[2,12],[4,11.5],[12,11.5],[13,10.8],[24,10.8],[25,11.3],[35,11.3],
+            [36,10.7],[47,10.7],[48,11.3],[57,11.3],[58,10.7],[70,10.7],[71,11.3],
+            [85,11.3],[87,12.2],[90,15.2]]
+  },
+  relax: {
+    label: "Relajación", titulo: "relajación profunda", dur: 30, carrier: 140, band: "Alpha",
+    sched: [[0,13],[3,10.5],[6,9.5],[10,9],[15,8.5],[27,8.5],[30,9]]
+  },
+  stress: {
+    label: "Anti-estrés", titulo: "alivio del estrés", dur: 20, carrier: 144, band: "Alpha",
+    sched: [[0,14],[2,11],[4,10.2],[8,10],[17,10],[19,10.5],[20,11]]
+  },
+  meditate: {
+    label: "Meditación", titulo: "meditación", dur: 30, carrier: 136, band: "Theta",
+    sched: [[0,11],[3,8],[6,6.5],[10,6],[26,6],[28,6.5],[30,7.5]]
+  },
+  sleep: {
+    label: "Sueño", titulo: "inducción al sueño", dur: 45, carrier: 100, band: "Delta",
+    sched: [[0,10],[4,7],[10,5],[18,3.5],[25,2.5],[45,2]]
+  }
+};
+
+/* ---------- State ---------- */
+let mode = "preset";            // "preset" | "custom"
+let presetKey = "focus";
+let customBeat = 11;
+let durationMin = PRESETS.focus.dur;
+let carrier = PRESETS.focus.carrier;
+let playing = false;
+let elapsedMs = 0;
+let startCtxTime = 0;   // ctx.currentTime at the (virtual) start of the session
+let endTimer = null;
+
+function activePreset() { return PRESETS[presetKey]; }
+
+function schedule() {
+  if (mode === "custom") return [[0, customBeat], [durationMin, customBeat]];
+  const p = activePreset();
+  const k = durationMin / p.dur;               // stretch schedule to chosen duration
+  return p.sched.map(([t, f]) => [t * k, f]);
+}
+
+function beatAt(min) {
+  const sch = schedule();
+  const t = Math.min(Math.max(min, 0), durationMin);
+  for (let i = 0; i < sch.length - 1; i++) {
+    const [t0, f0] = sch[i], [t1, f1] = sch[i + 1];
+    if (t >= t0 && t <= t1) {
+      const u = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
+      const s = 0.5 - 0.5 * Math.cos(Math.PI * u);   // eased steps, rounded corners
+      return f0 + (f1 - f0) * s;
+    }
+  }
+  return sch[sch.length - 1][1];
+}
+
+function activeBandName() {
+  if (mode === "custom") {
+    const b = BANDS.find(b => customBeat >= b.lo && customBeat < b.hi);
+    return b ? b.name : "Beta";
+  }
+  return activePreset().band;
+}
+
+function updateTitle() {
+  document.getElementById("title").textContent =
+    mode === "custom"
+      ? `${durationMin} minutos · sesión personalizada`
+      : `${durationMin} minutos de ${activePreset().titulo}`;
+}
+
+/* ---------- Audio ---------- */
+let ctx = null, leftOsc = null, rightOsc = null, master = null;
+
+function buildAudio() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+
+  const panL = new StereoPannerNode(ctx, { pan: -1 });
+  const panR = new StereoPannerNode(ctx, { pan: 1 });
+  panL.connect(master); panR.connect(master);
+
+  leftOsc = ctx.createOscillator();
+  rightOsc = ctx.createOscillator();
+  leftOsc.type = rightOsc.type = "sine";
+  leftOsc.frequency.value = carrier;
+  rightOsc.frequency.value = carrier + beatAt(elapsedMs / 60000);
+  leftOsc.connect(panL); rightOsc.connect(panR);
+  leftOsc.start(); rightOsc.start();
+}
+
+function targetVolume() {
+  return (document.getElementById("volume").value / 100) * 0.5;
+}
+
+function elapsedNowMs() {
+  if (playing && ctx) {
+    return Math.min((ctx.currentTime - startCtxTime) * 1000, durationMin * 60000);
+  }
+  return elapsedMs;
+}
+
+function cancelParam(p, t) {
+  if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+  else p.cancelScheduledValues(t);
+}
+
+/* Schedule the whole remaining session on the audio clock, so frequency
+   changes and the end-of-session fade-out happen even if the tab is
+   backgrounded (requestAnimationFrame freezes there; AudioContext doesn't). */
+function scheduleAudio() {
+  if (!ctx || !playing) return;
+  const now = ctx.currentTime;
+  const doneSec = elapsedNowMs() / 1000;
+  const remainSec = Math.max(0, durationMin * 60 - doneSec);
+
+  cancelParam(leftOsc.frequency, now);
+  leftOsc.frequency.setValueAtTime(carrier, now);
+
+  const f = rightOsc.frequency;
+  cancelParam(f, now);
+  f.setValueAtTime(carrier + beatAt(doneSec / 60), now);
+  const STEP_S = 10;
+  for (let s = STEP_S; s < remainSec + STEP_S; s += STEP_S) {
+    const sec = Math.min(s, remainSec);
+    f.linearRampToValueAtTime(carrier + beatAt((doneSec + sec) / 60), now + sec);
+  }
+
+  cancelParam(master.gain, now);
+  master.gain.setTargetAtTime(targetVolume(), now, 0.15);
+  master.gain.setTargetAtTime(0, now + Math.max(0, remainSec - 0.5), 0.15);
+
+  clearTimeout(endTimer);
+  endTimer = setTimeout(sessionEnd, remainSec * 1000 + 300);
+}
+
+function play() {
+  if (!ctx) buildAudio();
+  ctx.resume();
+  playing = true;
+  startCtxTime = ctx.currentTime - elapsedMs / 1000;
+  scheduleAudio();
+  setIcons();
+}
+
+function pause() {
+  elapsedMs = elapsedNowMs();
+  playing = false;
+  clearTimeout(endTimer);
+  endTimer = null;
+  if (ctx) {
+    const now = ctx.currentTime;
+    cancelParam(rightOsc.frequency, now);
+    cancelParam(leftOsc.frequency, now);
+    cancelParam(master.gain, now);
+    master.gain.setTargetAtTime(0, now, 0.15);
+  }
+  setIcons();
+}
+
+function sessionEnd() {
+  if (!playing) return;
+  pause();
+  elapsedMs = 0;
+}
+
+function restartClock() {
+  elapsedMs = 0;
+  if (playing && ctx) startCtxTime = ctx.currentTime;
+  scheduleAudio();
+}
+
+function setIcons() {
+  document.getElementById("playIcon").style.display = playing ? "none" : "block";
+  document.getElementById("pauseIcon").style.display = playing ? "block" : "none";
+  document.getElementById("playBtn").setAttribute("aria-label", playing ? "Pausa" : "Play");
+}
+
+/* ---------- UI wiring ---------- */
+const leftIn = document.getElementById("leftIn");
+const beatIn = document.getElementById("beatIn");
+const rightIn = document.getElementById("rightIn");
+const durIn = document.getElementById("duration");
+
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+
+function currentBeat() { return beatAt(elapsedMs / 60000); }
+
+leftIn.addEventListener("change", () => {
+  const v = parseFloat(leftIn.value);
+  if (!isNaN(v)) {
+    carrier = clamp(v, 30, 1500);
+    scheduleAudio();
+  }
+  leftIn.blur();
+});
+
+beatIn.addEventListener("change", () => {
+  const v = parseFloat(beatIn.value);
+  if (!isNaN(v)) {
+    customBeat = clamp(v, 0.5, 40);
+    enterCustom();
+  }
+  beatIn.blur();
+});
+
+rightIn.addEventListener("change", () => {
+  const v = parseFloat(rightIn.value);
+  if (!isNaN(v)) {
+    customBeat = clamp(Math.abs(v - carrier), 0.5, 40);
+    enterCustom();
+  }
+  rightIn.blur();
+});
+
+function enterCustom() {
+  mode = "custom";
+  document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+  updateTitle();
+  restartClock();
+}
+
+durIn.addEventListener("change", () => {
+  const v = parseFloat(durIn.value);
+  if (!isNaN(v)) {
+    durationMin = clamp(Math.round(v), 5, 180);
+    durIn.value = durationMin;
+    updateTitle();
+    if (elapsedNowMs() >= durationMin * 60000) sessionEnd();
+    else scheduleAudio();
+  }
+});
+
+function selectPreset(key) {
+  presetKey = key;
+  mode = "preset";
+  const p = PRESETS[key];
+  durationMin = p.dur;
+  carrier = p.carrier;
+  durIn.value = durationMin;
+  restartClock();
+  document.querySelectorAll(".preset-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.key === key));
+  updateTitle();
+}
+
+const presetsBar = document.getElementById("presets");
+for (const [key, p] of Object.entries(PRESETS)) {
+  const btn = document.createElement("button");
+  btn.className = "preset-btn" + (key === presetKey ? " active" : "");
+  btn.dataset.key = key;
+  btn.textContent = p.label;
+  btn.addEventListener("click", () => selectPreset(key));
+  presetsBar.appendChild(btn);
+}
+
+document.getElementById("playBtn").addEventListener("click", () => playing ? pause() : play());
+document.getElementById("volume").addEventListener("input", () => {
+  if (ctx && playing) master.gain.setTargetAtTime(targetVolume(), ctx.currentTime, 0.05);
+});
+
+/* ---------- Chart ---------- */
+const canvas = document.getElementById("chart");
+const g = canvas.getContext("2d");
+
+const COL = {
+  yellow: "#e9c352",
+  green: "#8fab55",
+  dark: "#474747",
+  line: "rgba(255,255,255,0.55)",
+  axis: "#ffffff",
+  bandInk: "rgba(255,255,255,0.95)",
+  dimInk: "rgba(120,120,120,0.9)"
+};
+
+const HZ_MIN = 1;
+let W = 0, H = 0, plot = null;
+
+function hzMax() {
+  const top = Math.max(...schedule().map(p => p[1]), 14);
+  return Math.max(15.6, top + 1.5);
+}
+
+function layout() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth;
+  H = Math.round(W * 0.52);
+  canvas.style.height = H + "px";
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const axisW = Math.max(46, W * 0.055);
+  plot = { x: axisW, y: 4, w: W - axisW - 4, h: H - 46 };
+}
+
+function fmtClock(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  return m + ":" + String(s % 60).padStart(2, "0");
+}
+
+function draw() {
+  g.clearRect(0, 0, W, H);
+  const { x, y, w, h } = plot;
+  const HZ_MAX = hzMax();
+  const yOf = hz => y + h * (1 - (clamp(hz, HZ_MIN, HZ_MAX) - HZ_MIN) / (HZ_MAX - HZ_MIN));
+  const xOf = min => x + w * (min / durationMin);
+  const active = activeBandName();
+
+  /* bands: active → green; Beta inactive → yellow; rest → dark */
+  const darkBands = [];
+  for (const b of BANDS) {
+    const top = yOf(Math.min(b.hi, HZ_MAX));
+    const bot = yOf(Math.max(b.lo, HZ_MIN));
+    if (bot - top < 1) continue;
+    const isActive = b.name === active;
+    g.fillStyle = isActive ? COL.green : (b.name === "Beta" ? COL.yellow : COL.dark);
+    g.fillRect(x, top, w, bot - top);
+    if (!isActive && b.name !== "Beta") darkBands.push({ ...b, top, bot });
+    /* band label */
+    if (bot - top > 34) {
+      g.font = `600 ${Math.round(W * 0.032)}px "Avenir Next", sans-serif`;
+      g.textBaseline = "middle";
+      g.textAlign = "left";
+      g.fillStyle = isActive ? COL.bandInk : (b.name === "Beta" ? "rgba(120,100,40,0.55)" : COL.dimInk);
+      g.fillText(b.name, x + 18, top + Math.min(34, (bot - top) / 2));
+    }
+  }
+  g.strokeStyle = "rgba(255,255,255,0.8)";
+  g.lineWidth = 2;
+  g.strokeRect(x + 1, y + 1, w - 2, h - 2);
+
+  /* y axis */
+  const tickFont = Math.round(W * 0.023);
+  g.font = `600 ${tickFont}px "Avenir Next", sans-serif`;
+  g.fillStyle = COL.axis;
+  g.strokeStyle = COL.axis;
+  g.textAlign = "right";
+  g.textBaseline = "middle";
+  for (let hz = 2; hz <= HZ_MAX - 1; hz += 2) {
+    const yy = yOf(hz);
+    g.beginPath(); g.moveTo(x - 12, yy); g.lineTo(x - 2, yy); g.stroke();
+    g.fillText(hz, x - 16, yy);
+  }
+  g.textBaseline = "middle";
+  g.fillText("Hz", x - 14, y + h + 14);
+
+  /* x axis: ticks at thirds of the session */
+  g.textAlign = "center";
+  g.textBaseline = "top";
+  for (let i = 1; i <= 3; i++) {
+    const min = Math.round(durationMin * i / 3);
+    const xx = xOf(min);
+    g.beginPath(); g.moveTo(xx, y + h + 2); g.lineTo(xx, y + h + 10); g.stroke();
+    g.fillText(min, i === 3 ? xx - 8 : xx, y + h + 14);
+  }
+  g.textAlign = "left";
+  g.fillText("Minutes", x + 4, y + h + 14);
+
+  /* countdown: inside the tallest dark band */
+  const remainMs = durationMin * 60000 - elapsedMs;
+  const zone = darkBands.sort((a, b) => (b.bot - b.top) - (a.bot - a.top))[0];
+  if (zone) {
+    const cy = (zone.top + zone.bot) / 2;
+    const cdFont = Math.round(W * 0.034);
+    const gap = cdFont * 0.75;
+    g.textAlign = "right";
+    g.textBaseline = "middle";
+    g.fillStyle = "rgba(255,255,255,0.95)";
+    g.font = `500 ${cdFont}px "Avenir Next", sans-serif`;
+    g.fillText("Tiempo restante de", x + w - 28, cy - gap);
+    const tail = ` ${fmtClock(remainMs)}`;
+    g.font = `700 ${cdFont}px "Avenir Next", sans-serif`;
+    const tailW = g.measureText(tail).width;
+    g.fillText(tail, x + w - 28, cy + gap);
+    g.font = `500 ${cdFont}px "Avenir Next", sans-serif`;
+    g.fillText("esta sesión:", x + w - 28 - tailW, cy + gap);
+  }
+
+  /* schedule line */
+  g.save();
+  g.beginPath();
+  g.rect(x, y, w, h);
+  g.clip();
+  g.beginPath();
+  const STEP = durationMin / 400;
+  for (let m = 0, i = 0; m <= durationMin + STEP / 2; m += STEP, i++) {
+    const px = xOf(Math.min(m, durationMin)), py = yOf(beatAt(m));
+    i === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+  }
+  g.strokeStyle = COL.line;
+  g.lineWidth = Math.max(3, W * 0.004);
+  g.lineJoin = g.lineCap = "round";
+  g.stroke();
+
+  /* progress dot */
+  const min = elapsedMs / 60000;
+  const dx = xOf(min), dy = yOf(beatAt(min));
+  g.beginPath(); g.arc(dx, dy, W * 0.035, 0, Math.PI * 2);
+  g.fillStyle = "rgba(255,255,255,0.18)"; g.fill();
+  g.beginPath(); g.arc(dx, dy, W * 0.022, 0, Math.PI * 2);
+  g.strokeStyle = "rgba(255,255,255,0.45)"; g.lineWidth = 2; g.stroke();
+  g.beginPath(); g.arc(dx, dy, W * 0.013, 0, Math.PI * 2);
+  g.fillStyle = COL.dark; g.fill();
+  g.strokeStyle = "#fff"; g.lineWidth = Math.max(3, W * 0.0035); g.stroke();
+  g.restore();
+}
+
+/* ---------- Main loop ---------- */
+function tick() {
+  if (playing) {
+    elapsedMs = elapsedNowMs();
+    if (elapsedMs >= durationMin * 60000) sessionEnd();
+  }
+  const beat = currentBeat();
+  const ae = document.activeElement;
+  if (ae !== leftIn) leftIn.value = carrier.toFixed(2);
+  if (ae !== beatIn) beatIn.value = beat.toFixed(2);
+  if (ae !== rightIn) rightIn.value = (carrier + beat).toFixed(2);
+  draw();
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener("resize", layout);
+const hashKey = location.hash.slice(1);
+if (PRESETS[hashKey]) selectPreset(hashKey);
+layout();
+updateTitle();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
