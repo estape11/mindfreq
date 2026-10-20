@@ -130,7 +130,7 @@
     margin-top: 2px;
   }
   .chart-wrap { width: 100%; }
-  canvas { display: block; width: 100%; }
+  canvas { display: block; width: 100%; cursor: ew-resize; }
   .controls {
     display: flex;
     align-items: center;
@@ -907,8 +907,40 @@ function draw() {
   g.beginPath(); g.arc(dx, dy, W * 0.013, 0, Math.PI * 2);
   g.fillStyle = COL.dark; g.fill();
   g.strokeStyle = "#fff"; g.lineWidth = Math.max(3, W * 0.0035); g.stroke();
+
+  /* seek line while dragging */
+  if (seeking) {
+    g.beginPath(); g.moveTo(dx, y); g.lineTo(dx, y + h);
+    g.strokeStyle = "rgba(255,255,255,0.55)";
+    g.lineWidth = 1.5; g.setLineDash([4, 4]); g.stroke(); g.setLineDash([]);
+  }
   g.restore();
 }
+
+/* ---------- Seek ---------- */
+let seeking = false;
+
+function seekToX(clientX) {
+  const rect = canvas.getBoundingClientRect();
+  const cssX = clientX - rect.left;
+  const min = (cssX - plot.x) / plot.w * durationMin;
+  elapsedMs = Math.max(0, Math.min(durationMin * 60000, min * 60000));
+  if (playing && ctx) {
+    startCtxTime = ctx.currentTime - elapsedMs / 1000;
+    scheduleAudio();
+  }
+}
+
+canvas.addEventListener("mousedown", e => { seeking = true; seekToX(e.clientX); });
+window.addEventListener("mousemove", e => { if (seeking) seekToX(e.clientX); });
+window.addEventListener("mouseup", () => { seeking = false; });
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault(); seeking = true; seekToX(e.touches[0].clientX);
+}, { passive: false });
+canvas.addEventListener("touchmove", e => {
+  if (!seeking) return; e.preventDefault(); seekToX(e.touches[0].clientX);
+}, { passive: false });
+canvas.addEventListener("touchend", () => { seeking = false; });
 
 /* ---------- Main loop ---------- */
 function tick() {
