@@ -897,14 +897,21 @@ function draw() {
   g.lineJoin = g.lineCap = "round";
   g.stroke();
 
-  /* progress dot */
+  /* progress dot — calm glow */
   const min = elapsedMs / 60000;
   const dx = xOf(min), dy = yOf(beatAt(min));
-  g.beginPath(); g.arc(dx, dy, W * 0.035, 0, Math.PI * 2);
-  g.fillStyle = "rgba(255,255,255,0.18)"; g.fill();
+  const breathe = 0.5 + 0.5 * Math.sin(performance.now() / 1000 * Math.PI * 2 / 3.5);
+  const baseR = W * 0.013;
+  /* outer auras: largest → smallest, drawn back to front */
+  [[0.092, 0.045], [0.062, 0.10], [0.038, 0.18]].forEach(([sz, maxA]) => {
+    g.beginPath(); g.arc(dx, dy, baseR + W * sz * (0.78 + 0.22 * breathe), 0, Math.PI * 2);
+    g.fillStyle = `rgba(255,255,255,${(maxA * breathe).toFixed(3)})`; g.fill();
+  });
+  /* ring */
   g.beginPath(); g.arc(dx, dy, W * 0.022, 0, Math.PI * 2);
-  g.strokeStyle = "rgba(255,255,255,0.45)"; g.lineWidth = 2; g.stroke();
-  g.beginPath(); g.arc(dx, dy, W * 0.013, 0, Math.PI * 2);
+  g.strokeStyle = `rgba(255,255,255,${(0.3 + 0.3 * breathe).toFixed(3)})`; g.lineWidth = 2; g.stroke();
+  /* core */
+  g.beginPath(); g.arc(dx, dy, baseR, 0, Math.PI * 2);
   g.fillStyle = COL.dark; g.fill();
   g.strokeStyle = "#fff"; g.lineWidth = Math.max(3, W * 0.0035); g.stroke();
 
